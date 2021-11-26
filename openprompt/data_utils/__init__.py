@@ -5,6 +5,7 @@ from .fewglue_dataset import PROCESSORS as SUPERGLUE_PROCESSORS
 from .relation_classification_dataset import PROCESSORS as RC_PROCESSORS
 from .lama_dataset import PROCESSORS as LAMA_PROCESSORS
 from .conditional_generation_dataset import PROCESSORS as CG_PROCESSORS
+from .control_generation_dataset import PROCESSORS as CT_PROCESSORS
 from .utils import InputExample, InputFeatures
 from .data_sampler import FewShotSampler
 # support loading transformers datasets from https://huggingface.co/docs/datasets/
@@ -20,6 +21,7 @@ PROCESSORS = {
     **RC_PROCESSORS,
     **LAMA_PROCESSORS,
     **CG_PROCESSORS,
+    **CT_PROCESSORS,
     **LAMA_PROCESSORS,
     **HF_PROCESSORS,
     **LMBFF_PROCESSORS,
