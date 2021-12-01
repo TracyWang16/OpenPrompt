@@ -65,6 +65,7 @@ class BaseRunner(object):
         if not os.path.exists(os.path.join(config.logging.path, 'checkpoints')):
             os.mkdir(os.path.join(config.logging.path, 'checkpoints'))
 
+        self.config.train.clean = False #save model
         self.clean = self.config.train.clean
         
     def __del__(self):

@@ -1,10 +1,12 @@
 import argparse
 import torch
+import os
 parser = argparse.ArgumentParser("")
 parser.add_argument("--lr", type=float, default=1e-2)
 parser.add_argument("--plm_eval_mode", action="store_true")
 parser.add_argument("--model", type=str, default='t5')  # tested model are gpt2/t5
 parser.add_argument("--model_name_or_path", default='t5-base')
+parser.add_argument("--model_save_dir",default=None)
 args = parser.parse_args()
 
 
@@ -58,7 +60,7 @@ print(wrapped_example)
 
 from openprompt import PromptDataLoader
 
-train_dataloader = PromptDataLoader(dataset=dataset["train"], template=mytemplate, tokenizer=tokenizer, 
+train_dataloader = PromptDataLoader(dataset=dataset["test"], template=mytemplate, tokenizer=tokenizer, 
     tokenizer_wrapper_class=WrapperClass, max_seq_length=256, decoder_max_length=256, 
     batch_size=5,shuffle=True, teacher_forcing=True, predict_eos_token=True,
     truncate_method="head")
@@ -136,8 +138,11 @@ generation_arguments = {
 global_step = 0 
 tot_loss = 0 
 log_loss = 0
+epoch_loss = 0
+epoch_log_loss = 0
 # training and generation.
 tot_loss = 0 
+min_epoch_loss = 0
 for epoch in range(5):
     for step, inputs in enumerate(train_dataloader):
         global_step +=1
@@ -145,6 +150,7 @@ for epoch in range(5):
             inputs = inputs.cuda()
         loss = prompt_model(inputs)
         loss.backward()
+
         tot_loss += loss.item()
         torch.nn.utils.clip_grad_norm_(mytemplate.parameters(), 1.0)
         optimizer.step()
@@ -153,7 +159,42 @@ for epoch in range(5):
         if global_step %500 ==0: 
             print("Epoch {}, global_step {} average loss: {} lr: {}".format(epoch, global_step, (tot_loss-log_loss)/500, scheduler.get_last_lr()[0]), flush=True)
             log_loss = tot_loss
-evaluate(prompt_model, test_dataloader)
+    
+
+    if epoch == 0:
+        epoch_loss = tot_loss
+        epoch_log_loss = tot_loss
+        min_epoch_loss = tot_loss
+    else:
+        epoch_loss = tot_loss - epoch_log_loss
+        epoch_log_loss = tot_loss
+
+    model_save_dir = os.path.join(args.model_save_dir,'epoch_'+str(epoch))
+    if min_epoch_loss > epoch_loss:
+        assert not os.path.exists(model_save_dir)
+        os.makedirs(model_save_dir)
+
+        torch.save(prompt_model, os.path.join(model_save_dir,'pytorch_model.bin'))
+        with open ('prompt_model.txt','w') as f_1:
+            for para in prompt_model.parameters():
+                f_1.write(str(para))
+                f_1.write('\n')
+        f_1.close()
+
+        prompt_model_new = torch.load(os.path.join(model_save_dir,'pytorch_model.bin'))
+        with open ('prompt_model_new.txt','w') as f_2:
+            for para in prompt_model_new.parameters():
+                f_2.write(str(para))
+                f_2.write('\n')
+        f_2.close()
+
+
+        min_epoch_loss = epoch_loss
+
+if use_cuda:
+    prompt_model_new =  prompt_model_new.cuda()
+prompt_model_new.eval()
+evaluate(prompt_model_new, test_dataloader)
 
 
 # %%

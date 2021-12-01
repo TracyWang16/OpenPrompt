@@ -52,7 +52,7 @@ def add_examples(prompts, pos_file=None, neg_file=None):
     return prompts
 '''
 
-class ToxicyProcessor(DartProcessor):
+class ToxicyProcessor(DataProcessor):
     def __init__(self):
         super().__init__()
         self.labels = None
@@ -74,12 +74,12 @@ class ToxicyProcessor(DartProcessor):
                 examples.append(example)
 
         elif add_pos_example:
-            for i, (text, pos_example) in enumerate(zip(prompts,pos_examples):
+            for i, (text, pos_example) in enumerate(zip(prompts,pos_examples)):
                 example = InputExample(guid=str(i),text_a=text, tgt_text=text, meta={'pos':pos_example})
                 examples.append(example)
 
         elif add_neg_example:
-            for i, (text,neg_example) in enumerate(zip(prompts,neg_examples):
+            for i, (text,neg_example) in enumerate(zip(prompts,neg_examples)):
                 example = InputExample(guid=str(i),text_a=text, tgt_text=text, meta={'neg':neg_example})
                 examples.append(example)
 
