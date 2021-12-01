@@ -508,7 +508,7 @@ class PromptForGeneration(nn.Module, GenerationMixin):
                 text_output = text_output[:idx]
             text_output = text_output.strip()
             generated_sentences.append(text_output)
-        print(generated_sentences)
+        #print(generated_sentences)
         return generated_sentences
 
 
