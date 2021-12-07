@@ -26,14 +26,14 @@ class MixedTemplate(Template):
     def __init__(self,
                  model: PreTrainedModel,
                  tokenizer: PreTrainedTokenizer,
-		 prompt_encoder_type: str = "lstm",
+		         prompt_encoder_type: str = "lstm",
                  text: Optional[str] = None,
                 ):
         
         super().__init__(tokenizer)
 
         self.raw_embedding = model.get_input_embeddings()
-	self.prompt_encoder_type = prompt_encoder_type
+        self.prompt_encoder_type = prompt_encoder_type
         self.embedding_size = self.raw_embedding.weight.shape[-1]
         self.text = text
 
