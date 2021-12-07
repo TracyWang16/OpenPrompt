@@ -52,16 +52,24 @@ def add_examples(prompts, pos_file=None, neg_file=None):
     return prompts
 '''
 
-class ToxicyProcessor(DataProcessor):
+class ToxicityProcessor(DataProcessor):
     def __init__(self):
         super().__init__()
         self.labels = None
 
     def get_examples(self, data_path:str, line_by_line=False, add_neg_example=False, add_pos_example=False, pos_example_filepath=None, neg_example_filepath=None):
         examples = []
-        assert data_path.endswith('.jsonl') 
-        dataset = pd.read_json(data_path, lines=True)         #prompts/nontoxic_prompts-10k.jsonl
-        prompts = pd.json_normalize(dataset['prompt'])['text']
+        if data_path.endswith('.jsonl'):
+            dataset = pd.read_json(data_path, lines=True)         #prompts/nontoxic_prompts-10k.jsonl
+            prompts = pd.json_normalize(dataset['prompt'])['text']
+        elif data_path.endswith('.txt'):
+            #jigsaw-unintended-bias-in-toxicity-classification/toxicity_05_small.txt
+            with open(data_path, encoding="utf-8") as f:
+                text = f.readlines()
+                text = [t[:-1] for t in text]
+                prompts = [t for t in text if len(t.split(' '))>5]
+        else:
+            raise NotImplementedError
 
         if add_pos_example:
             pos_examples = select_examples(example_file=pos_example_filepath, example_num=len(prompts))
@@ -70,29 +78,33 @@ class ToxicyProcessor(DataProcessor):
 
         if add_pos_example and add_neg_example:
             for i, (text, pos_example, neg_example) in enumerate(zip(prompts, pos_examples, neg_examples)):
-                example = InputExample(guid=str(i),text_a=text, tgt_text=text, meta={'pos':pos_example, 'neg':neg_example})
+                #example = InputExample(guid=str(i),text_a=text, tgt_text=text, meta={'pos':pos_example, 'neg':neg_example})
+                example = InputExample(guid=str(i), tgt_text=text, meta={'pos':pos_example, 'neg':neg_example})
                 examples.append(example)
 
         elif add_pos_example:
             for i, (text, pos_example) in enumerate(zip(prompts,pos_examples)):
-                example = InputExample(guid=str(i),text_a=text, tgt_text=text, meta={'pos':pos_example})
+                #example = InputExample(guid=str(i),text_a=text, tgt_text=text, meta={'pos':pos_example})
+                example = InputExample(guid=str(i), tgt_text=text, meta={'pos':pos_example})
                 examples.append(example)
 
         elif add_neg_example:
             for i, (text,neg_example) in enumerate(zip(prompts,neg_examples)):
-                example = InputExample(guid=str(i),text_a=text, tgt_text=text, meta={'neg':neg_example})
+                #example = InputExample(guid=str(i),text_a=text, tgt_text=text, meta={'neg':neg_example})
+                example = InputExample(guid=str(i), tgt_text=text, meta={'neg':neg_example})
                 examples.append(example)
 
         else:
             for i,text in enumerate(prompts):
-                example = InputExample(guid=str(i),text_a=text, tgt_text=text)
+                #example = InputExample(guid=str(i),text_a=text, tgt_text=text)
+                example = InputExample(guid=str(i), tgt_text=text)
                 examples.append(example)
         
         return examples
     
 
 PROCESSORS = {
-    "toxicity": ToxicyProcessor,
+    "toxicity": ToxicityProcessor,
     # "e2e": E2eProcessor,
     # "dart" : DartProcessor,
 }
