@@ -62,12 +62,14 @@ class ToxicityProcessor(DataProcessor):
         if data_path.endswith('.jsonl'):
             dataset = pd.read_json(data_path, lines=True)         #prompts/nontoxic_prompts-10k.jsonl
             prompts = pd.json_normalize(dataset['prompt'])['text']
+            prompts = [t.replace('\xad','') for t in prompts]
         elif data_path.endswith('.txt'):
             #jigsaw-unintended-bias-in-toxicity-classification/toxicity_05_small.txt
             with open(data_path, encoding="utf-8") as f:
                 text = f.readlines()
                 text = [t[:-1] for t in text]
                 prompts = [t for t in text if len(t.split(' '))>5]
+                prompts = [t.replace('\xad','') for t in prompts]
         else:
             raise NotImplementedError
 

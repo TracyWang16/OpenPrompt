@@ -62,6 +62,7 @@ class LMTokenizerWrapper(TokenizerWrapper):
             if piece['text'] == self.template_mask_token:
                 if teacher_forcing:
                     piece['text'] = " "+tgt_text[num_mask_token_used]+" "
+                    piece['shortenable_ids'] = 1 #if the tgt_sentence is longer than the max_seq_length, it will be truncated
                 else:
                     encoder_inputs['loss_ids'][-1][-1] = 1
                     break
@@ -86,6 +87,8 @@ class LMTokenizerWrapper(TokenizerWrapper):
                     encoder_inputs[key].append([piece[key]]*encoding_length)
 
         encoder_inputs = self.truncate(encoder_inputs=encoder_inputs)
+        if len(encoder_inputs['input_ids'])>self.max_seq_length:
+            print('Ohhhh')
 
         # delete shortenable ids
         encoder_inputs.pop("shortenable_ids")
@@ -102,6 +105,8 @@ class LMTokenizerWrapper(TokenizerWrapper):
             max_len = self.max_seq_length,
             pad_id_for_inputs = self.tokenizer.pad_token_id
         )
+        if len(encoder_inputs['input_ids'])>self.max_seq_length:
+            print('Ohhhh')
         encoder_inputs = {**encoder_inputs, "input_ids_len": input_ids_len}
         return encoder_inputs
     
