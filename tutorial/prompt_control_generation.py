@@ -39,6 +39,15 @@ dataset['train'] = ToxicityProcessor().get_examples(data_path=args.data_path, ad
 from openprompt.plms import load_plm
 
 plm, tokenizer, model_config, WrapperClass = load_plm(args.model, args.model_name_or_path)
+'''
+for i in range(len(dataset['train'])):
+    tgt_text = dataset['train'][i].tgt_text
+    tgt_len = len(tokenizer.convert_tokens_to_ids(tokenizer.tokenize(tgt_text)) )
+    if tgt_len>256:
+        aa = 0
+'''
+
+dataset['train'] = dataset['train'][657980:657985]
 
 from openprompt.prompts import MixedTemplate
 if args.add_control:
@@ -66,7 +75,7 @@ from openprompt import PromptDataLoader
 
 train_dataloader = PromptDataLoader(dataset=dataset["train"], template=mytemplate, tokenizer=tokenizer, 
     tokenizer_wrapper_class=WrapperClass, max_seq_length=args.max_seq_length, decoder_max_length=args.decoder_max_length, 
-    batch_size=args.batch_size,shuffle=True, teacher_forcing=True, predict_eos_token=True,
+    batch_size=args.batch_size,shuffle=False, teacher_forcing=True, predict_eos_token=True,
     truncate_method="head")
 
 
