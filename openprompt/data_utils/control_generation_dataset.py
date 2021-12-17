@@ -81,7 +81,7 @@ class ToxicityProcessor(DataProcessor):
         if add_pos_example and add_neg_example:
             for i, (text, pos_example, neg_example) in enumerate(zip(prompts, pos_examples, neg_examples)):
                 #example = InputExample(guid=str(i),text_a=text, tgt_text=text, meta={'pos':pos_example, 'neg':neg_example})
-                example = InputExample(guid=str(i), tgt_text=text, meta={'pos':pos_example, 'neg':neg_example})
+                example = InputExample(guid=str(i), text_a=' '.join(text.split(' ')[0:5]), tgt_text=' '.join(text.split(' ')[5:]), meta={'pos':pos_example, 'neg':neg_example})
                 examples.append(example)
 
         elif add_pos_example:
@@ -99,7 +99,7 @@ class ToxicityProcessor(DataProcessor):
         else:
             for i,text in enumerate(prompts):
                 #example = InputExample(guid=str(i),text_a=text, tgt_text=text)
-                example = InputExample(guid=str(i), tgt_text=text)
+                example = InputExample(guid=str(i), text_a=' '.join(text.split(' ')[0:5]), tgt_text=' '.join(text.split(' ')[5:]))
                 examples.append(example)
         
         return examples
