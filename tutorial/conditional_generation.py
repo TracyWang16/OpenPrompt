@@ -4,8 +4,8 @@ import os
 parser = argparse.ArgumentParser("")
 parser.add_argument("--lr", type=float, default=1e-2)
 parser.add_argument("--plm_eval_mode", action="store_true")
-parser.add_argument("--model", type=str, default='t5')  # tested model are gpt2/t5
-parser.add_argument("--model_name_or_path", default='t5-base')
+parser.add_argument("--model", type=str, default='gpt2')  # tested model are gpt2/t5
+parser.add_argument("--model_name_or_path", default='None')
 parser.add_argument("--model_save_dir",default=None)
 args = parser.parse_args()
 
@@ -103,7 +103,7 @@ optimizer = AdamW(optimizer_grouped_parameters, lr=args.lr)
 
 from transformers.optimization import get_linear_schedule_with_warmup
 
-tot_step  = len(train_dataloader)*5
+tot_step  = len(train_dataloader)*10
 scheduler = get_linear_schedule_with_warmup(optimizer, 0, tot_step)
 # We provide generation a generation metric, you can also define your own. Note that it's not directly comparable to WebNLG's scripts evaluation.
 from openprompt.utils.metrics import generation_metric
@@ -143,7 +143,7 @@ epoch_log_loss = 0
 # training and generation.
 tot_loss = 0 
 min_epoch_loss = 0
-for epoch in range(5):
+for epoch in range(10):
     for step, inputs in enumerate(train_dataloader):
         global_step +=1
         if use_cuda:
@@ -156,11 +156,11 @@ for epoch in range(5):
         optimizer.step()
         scheduler.step()
         optimizer.zero_grad()
-        if global_step %500 ==0: 
-            print("Epoch {}, global_step {} average loss: {} lr: {}".format(epoch, global_step, (tot_loss-log_loss)/500, scheduler.get_last_lr()[0]), flush=True)
+        if global_step %100 ==0: 
+            print("Epoch {}, global_step {} average loss: {} lr: {}".format(epoch, global_step, (tot_loss-log_loss)/100, scheduler.get_last_lr()[0]), flush=True)
             log_loss = tot_loss
     
-
+    '''
     if epoch == 0:
         epoch_loss = tot_loss
         epoch_log_loss = tot_loss
@@ -190,11 +190,9 @@ for epoch in range(5):
 
 
         min_epoch_loss = epoch_loss
-
+        
 if use_cuda:
     prompt_model_new =  prompt_model_new.cuda()
 prompt_model_new.eval()
 evaluate(prompt_model_new, test_dataloader)
-
-
-# %%
+'''

@@ -2,16 +2,17 @@ import argparse
 import torch
 import os
 parser = argparse.ArgumentParser("")
-parser.add_argument("--lr", type=float, default=1e-2)
+parser.add_argument("--lr", type=float, default=5e-5)
 parser.add_argument("--plm_eval_mode", action="store_true")
 parser.add_argument("--model", type=str, default='t5')  # tested model are gpt2/t5
 parser.add_argument("--model_name_or_path", default='t5-base')
 
 parser.add_argument("--max_seq_length", type=int, default=256)
 parser.add_argument("--decoder_max_length", type=int, default=256)
-parser.add_argument("--batch_size", type=int, default=5)
+parser.add_argument("--batch_size", type=int, default=16)
+parser.add_argument("--accumulation_step", type=int, default=32)
 parser.add_argument("--freeze_plm", dest='freeze_plm', action='store_true',default=True)
-parser.add_argument("--epoch", type=int, default=1)
+parser.add_argument("--epoch", type=int, default=10)
 
 parser.add_argument("--add_control", dest='add_control', action='store_true',default=False)
 parser.add_argument("--control_template",type=str,default=None,help='Whether to add control before input text.')
@@ -26,6 +27,8 @@ parser.add_argument("--model_save_dir",default=None)
 args = parser.parse_args()
 
 from openprompt.data_utils.control_generation_dataset import ToxicityProcessor
+
+assert not os.path.exists(args.model_save_dir)
 
 dataset = {}
 dataset['train'] = ToxicityProcessor().get_examples(data_path=args.data_path, add_neg_example=args.add_neg_example, add_pos_example=args.add_pos_example, neg_example_filepath=args.neg_example_filepath,pos_example_filepath=args.pos_example_filepath)
@@ -47,7 +50,7 @@ for i in range(len(dataset['train'])):
         aa = 0
 '''
 
-dataset['train'] = dataset['train'][657980:657985]
+#dataset['train'] = dataset['train'][0:40000]
 
 from openprompt.prompts import MixedTemplate
 if args.add_control:
@@ -136,9 +139,13 @@ tot_loss = 0
 log_loss = 0
 epoch_loss = 0
 epoch_log_loss = 0
+best_epoch = 0
 # training and generation.
 tot_loss = 0 
 min_epoch_loss = 0
+
+if not os.path.exists(os.path.join(args.model_save_dir,'epoches')):
+    os.makedirs(os.path.join(args.model_save_dir,'epoches'))
 
 for epoch in range(args.epoch):
     for step, inputs in enumerate(train_dataloader):
@@ -146,15 +153,24 @@ for epoch in range(args.epoch):
         if use_cuda:
             inputs = inputs.cuda()
         loss = prompt_model(inputs)
-        loss.backward()
 
+        #accumulation 
+        loss = loss / args.accumulation_step
+        loss.backward()
         tot_loss += loss.item()
         torch.nn.utils.clip_grad_norm_(mytemplate.parameters(), 1.0)
-        optimizer.step()
-        scheduler.step()
-        optimizer.zero_grad()
+
+
+        if (step+1) % args.accumulation_step == 0 :
+            optimizer.step()
+            scheduler.step()
+            optimizer.zero_grad()
+
         if global_step %500 ==0: 
             print("Epoch {}, global_step {} average loss: {} lr: {}".format(epoch, global_step, (tot_loss-log_loss)/500, scheduler.get_last_lr()[0]), flush=True)
+            with open(os.path.join(args.model_save_dir,'log.txt'), 'a') as f_log:
+                f_log.write("Epoch {}, global_step {} average loss: {} lr: {} \n".format(epoch, global_step, (tot_loss-log_loss)/500, scheduler.get_last_lr()[0]))
+                f_log.close()
             log_loss = tot_loss
 
     if epoch == 0:
@@ -165,19 +181,36 @@ for epoch in range(args.epoch):
         epoch_loss = tot_loss - epoch_log_loss
         epoch_log_loss = tot_loss
 
-    model_save_dir = os.path.join(args.model_save_dir,'epoch_'+str(epoch))
+    print("Epoch {}, loss:{} \n".format(epoch,epoch_loss))
+    with open(os.path.join(args.model_save_dir,'log.txt'), 'a') as f_log:
+        f_log.write("Epoch {}, loss:{} \n".format(epoch,epoch_loss))
+        f_log.close()
 
-    if min_epoch_loss > epoch_loss:
-        assert not os.path.exists(model_save_dir)
-        os.makedirs(model_save_dir)
-
-        torch.save(prompt_model, os.path.join(model_save_dir,'pytorch_model.bin'))
-        prompt_model_new = torch.load(os.path.join(model_save_dir,'pytorch_model.bin'))
+    if epoch_loss<=min_epoch_loss:    
         min_epoch_loss = epoch_loss
+        best_epoch = epoch
 
-if use_cuda:
-    prompt_model_new =  prompt_model_new.cuda()
-prompt_model_new.eval()
+    #if not os.path.exists(os.path.join(args.model_save_dir,'epoches')):
+       #os.makedirs(os.path.join(args.model_save_dir,'epoches'))
+    if epoch % 2==0:
+        model_save_dir = os.path.join(args.model_save_dir,'epoches','epoch_'+str(epoch))
+
+    #if min_epoch_loss >= epoch_loss:
+    assert not os.path.exists(model_save_dir)
+    os.makedirs(model_save_dir)
+
+    torch.save(prompt_model, os.path.join(model_save_dir,'pytorch_model.bin'))
+    #prompt_model_new = torch.load(os.path.join(model_save_dir,'pytorch_model.bin'))
+
+print("Best Epoch {} \n".format(best_epoch))
+with open(os.path.join(args.model_save_dir,'log.txt'), 'a') as f_log:
+    f_log.write("Best Epoch {} \n".format(best_epoch))
+    f_log.close()
+
+
+#if use_cuda:
+#    prompt_model_new =  prompt_model_new.cuda()
+#prompt_model_new.eval()
 #evaluate(prompt_model_new, test_dataloader)
 
 
