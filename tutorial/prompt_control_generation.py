@@ -45,6 +45,8 @@ from openprompt.data_utils.conditional_generation_dataset import WebNLGProcessor
 if not args.plm_eval_mode:
     assert not os.path.exists(args.model_save_dir)
 
+assert not os.path.exists(args.model_save_dir)
+
 dataset = {}
 if not args.plm_eval_mode:
     dataset['train'] = ToxicityProcessor().get_examples(data_path=args.data_path, add_neg_example=args.add_neg_example, add_pos_example=args.add_pos_example, neg_example_filepath=args.neg_example_filepath,pos_example_filepath=args.pos_example_filepath)
