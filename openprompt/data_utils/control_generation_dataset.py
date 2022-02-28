@@ -16,6 +16,7 @@ This file contains the logic for loading data for all Conditional Generation tas
 
 from openprompt.data_utils.utils import InputExample
 import os
+import pandas as pd
 import json, csv
 from abc import ABC, abstractmethod
 from collections import defaultdict, Counter
@@ -26,10 +27,15 @@ from openprompt.data_utils.data_processor import DataProcessor
 
 
 def select_examples(example_file, example_num):
-    fin_sele =  open (example_file,'r')
-    text_dict = json.loads(fin_sele.read())
-    text_list = [text['comment_text'].replace('\\n','') for text in text_dict]
-    text_list = [text.replace('\n','') for text in text_list]
+    if example_file.endswith('.jsonl'):
+        fin_sele =  open (example_file,'r')
+        text_dict = json.loads(fin_sele.read())
+        text_list = [text['comment_text'].replace('\\n','') for text in text_dict]
+        text_list = [text.replace('\n','') for text in text_list]
+    elif example_file.endswith('.txt'):
+        fin_sele =  open (example_file,'r')
+        text = fin_sele.readlines()
+        text_list = [t[:-1] for t in text]
     while len(text_list)<example_num:
         text_list = text_list+text_list
     #return sample(text_list,example_num)
@@ -63,6 +69,7 @@ class ToxicityProcessor(DataProcessor):
             dataset = pd.read_json(data_path, lines=True)         #prompts/nontoxic_prompts-10k.jsonl
             prompts = pd.json_normalize(dataset['prompt'])['text']
             prompts = [t.replace('\xad','') for t in prompts]
+            prompts = [t+' '+t for t in prompts]
         elif data_path.endswith('.txt'):
             #jigsaw-unintended-bias-in-toxicity-classification/toxicity_05_small.txt
             with open(data_path, encoding="utf-8") as f:
@@ -81,13 +88,13 @@ class ToxicityProcessor(DataProcessor):
         if add_pos_example and add_neg_example:
             for i, (text, pos_example, neg_example) in enumerate(zip(prompts, pos_examples, neg_examples)):
                 #example = InputExample(guid=str(i),text_a=text, tgt_text=text, meta={'pos':pos_example, 'neg':neg_example})
-                example = InputExample(guid=str(i), text_a=' '.join(text.split(' ')[0:5]), tgt_text=' '.join(text.split(' ')[5:]), meta={'pos':pos_example, 'neg':neg_example})
+                example = InputExample(guid=str(i), tgt_text=text, meta={'pos':pos_example, 'neg':neg_example})
                 examples.append(example)
 
         elif add_pos_example:
             for i, (text, pos_example) in enumerate(zip(prompts,pos_examples)):
                 #example = InputExample(guid=str(i),text_a=text, tgt_text=text, meta={'pos':pos_example})
-                example = InputExample(guid=str(i), tgt_text=text, meta={'pos':pos_example})
+                example = InputExample(guid=str(i),text_a=' '.join(text.split(' ')[:int(len(text.split(' '))/2)]), tgt_text=' '.join(text.split(' ')[int(len(text.split(' '))/2):]), meta={'pos':pos_example})
                 examples.append(example)
 
         elif add_neg_example:
@@ -98,8 +105,8 @@ class ToxicityProcessor(DataProcessor):
 
         else:
             for i,text in enumerate(prompts):
-                #example = InputExample(guid=str(i),text_a=text, tgt_text=text)
-                example = InputExample(guid=str(i), text_a=' '.join(text.split(' ')[0:5]), tgt_text=' '.join(text.split(' ')[5:]))
+                example = InputExample(guid=str(i),tgt_text=text)
+                #example = InputExample(guid=str(i), text_a=' '.join(text.split(' ')[:int(len(text.split(' '))/2)]), tgt_text=' '.join(text.split(' ')[int(len(text.split(' '))/2):]))
                 examples.append(example)
         
         return examples
