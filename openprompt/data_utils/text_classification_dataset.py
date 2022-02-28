@@ -267,7 +267,7 @@ class SST2Processor(DataProcessor):
         test_dataset = processor.get_test_examples(dataset_path)
 
         assert processor.get_num_labels() == 2
-        assert processor.get_labels() == [0,1]
+        assert processor.get_labels() == ['0','1']
         assert len(train_dataset) == 6920
         assert len(dev_dataset) == 872
         assert len(test_dataset) == 1821
@@ -277,7 +277,7 @@ class SST2Processor(DataProcessor):
     """
     def __init__(self):
         super().__init__()
-        self.labels = [0, 1]
+        self.labels = ['0', '1']
     
     def get_examples(self, data_dir, split):
         path = os.path.join(data_dir, f"{split}.tsv")
@@ -287,7 +287,7 @@ class SST2Processor(DataProcessor):
             for idx, line in enumerate(lines[1:]):
                 linelist = line.strip().split('\t')
                 text_a = linelist[0]
-                label = int(linelist[1])
+                label = linelist[1]
                 guid = "%s-%s" % (split, idx)
                 example = InputExample(guid=guid, text_a=text_a, label=self.get_label_id(label))
                 examples.append(example)

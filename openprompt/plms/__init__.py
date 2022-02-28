@@ -3,7 +3,7 @@ from transformers.modeling_utils import PreTrainedModel
 from .utils import TokenizerWrapper
 from transformers.tokenization_utils import PreTrainedTokenizer
 from .mlm import MLMTokenizerWrapper
-from .seq2seq import T5TokenizerWrapper
+from .seq2seq import T5LMTokenizerWrapper, T5TokenizerWrapper
 from .lm import LMTokenizerWrapper
 from transformers import BertConfig, BertTokenizer, BertModel, BertForMaskedLM, \
                          RobertaConfig, RobertaTokenizer, RobertaModel, RobertaForMaskedLM, \
@@ -13,6 +13,8 @@ from transformers import BertConfig, BertTokenizer, BertModel, BertForMaskedLM, 
                          GPT2Config, GPT2Tokenizer, GPT2LMHeadModel      
 from collections import namedtuple
 from yacs.config import CfgNode
+import torch
+import os
 
 from openprompt.utils.logging import logger
 
@@ -60,7 +62,7 @@ _MODEL_CLASSES = {
         'config': T5Config,
         'tokenizer': T5Tokenizer,
         'model': T5ForConditionalGeneration,
-        'wrapper': LMTokenizerWrapper,
+        'wrapper': T5LMTokenizerWrapper,
     }),
 }
 
@@ -70,6 +72,37 @@ def get_model_class(plm_type: str):
 
 
 def load_plm(model_name, model_path, specials_to_add = None):
+    r"""A plm loader using a global config.
+    It will load the model, tokenizer, and config simulatenously.
+    
+    Args:
+        config (:obj:`CfgNode`): The global config from the CfgNode.
+    
+    Returns:
+        :obj:`PreTrainedModel`: The pretrained model.
+        :obj:`tokenizer`: The pretrained tokenizer.
+        :obj:`model_config`: The config of the pretrained model.
+        :obj:`wrapper`: The wrapper class of this plm.
+    """
+    model_class = get_model_class(plm_type = model_name)
+    model_config = model_class.config.from_pretrained(model_path)
+    # you can change huggingface model_config here
+    # if 't5'  in model_name: # remove dropout according to PPT~\ref{}
+    #     model_config.dropout_rate = 0.0
+    if 'gpt' in model_name: # add pad token for gpt 
+        specials_to_add = ["<pad>"]
+        # model_config.attn_pdrop = 0.0
+        # model_config.resid_pdrop = 0.0
+        # model_config.embd_pdrop = 0.0
+    model = model_class.model.from_pretrained(model_path, config=model_config)
+    tokenizer = model_class.tokenizer.from_pretrained(model_path)
+    wrapper = model_class.wrapper
+
+
+    model, tokenizer = add_special_tokens(model, tokenizer, specials_to_add=specials_to_add)
+    return model, tokenizer, model_config, wrapper
+
+def load_plm_eval(model_name,model_path,specials_to_add= None):
     r"""A plm loader using a global config.
     It will load the model, tokenizer, and config simulatenously.
     
@@ -92,12 +125,11 @@ def load_plm(model_name, model_path, specials_to_add = None):
         # model_config.attn_pdrop = 0.0
         # model_config.resid_pdrop = 0.0
         # model_config.embd_pdrop = 0.0
-    model = model_class.model.from_pretrained(model_path, config=model_config)
+    model = torch.load(os.path.join(model_path,'pytorch_model.bin'))
     tokenizer = model_class.tokenizer.from_pretrained(model_path)
     wrapper = model_class.wrapper
 
-
-    model, tokenizer = add_special_tokens(model, tokenizer, specials_to_add=specials_to_add)
+    model, tokenizer = add_special_tokens_eval(model, tokenizer, specials_to_add=specials_to_add)
     return model, tokenizer, model_config, wrapper
 
 def load_plm_from_config(config: CfgNode):
@@ -154,5 +186,29 @@ def add_special_tokens(model: PreTrainedModel,
                 logger.info("pad token is None, set to id {}".format(tokenizer.pad_token_id))
     return model, tokenizer
 
+def add_special_tokens_eval(model: PreTrainedModel, 
+                       tokenizer: PreTrainedTokenizer,
+                       specials_to_add: Optional[List[str]] = None):
+    r"""add the special_tokens to tokenizer if the special token
+    is not in the tokenizer. 
 
+    Args:
+        model (:obj:`PreTrainedModel`): The pretrained model to resize embedding
+                after adding special tokens.
+        tokenizer (:obj:`PreTrainedTokenizer`): The pretrained tokenizer to add special tokens.
+        specials_to_add: (:obj:`List[str]`, optional): The special tokens to be added. Defaults to pad token.
+
+    Returns:
+        The resized model, The tokenizer with the added special tokens.
+
+    """
+    if specials_to_add is None:
+        return model, tokenizer
+    for token in specials_to_add:
+        if "pad" in token.lower():
+            if tokenizer.pad_token is None:
+                tokenizer.add_special_tokens({'pad_token': token})
+                #model.resize_token_embeddings(len(tokenizer))
+                logger.info("pad token is None, set to id {}".format(tokenizer.pad_token_id))
+    return model, tokenizer
 

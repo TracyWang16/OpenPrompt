@@ -10,14 +10,15 @@
 
 # load dataset
 from datasets import load_dataset
-raw_dataset = load_dataset('super_glue', 'cb', cache_dir="../datasets/.cache/huggingface_datasets")
-raw_dataset['train'][0]
-
-# # Basic Usage: Custom dataset to do classification on various prompt. 
-# ## Construct InputExample from the dataset format
-# The format of InputeExample must match the datafield of template. 
-# For example, you want the input example to be `passasge` `question` __ .
-
+# raw_dataset = load_dataset('super_glue', 'cb', cache_dir="../datasets/.cache/huggingface_datasets")
+# raw_dataset['train'][0]
+from datasets import load_from_disk
+raw_dataset = load_from_disk("/home/hushengding/huggingface_datasets/saved_to_disk/super_glue.cb")
+# Note that if you are running this scripts inside a GPU cluster, there are chances are you are not able to connect to huggingface website directly. 
+# In this case, we recommend you to run `raw_dataset = load_dataset(...)` on some machine that have internet connections. 
+# Then use `raw_dataset.save_to_disk(path)` method to save to local path.
+# Thirdly upload the saved content into the machiine in cluster. 
+# Then use `load_from_disk` method to load the dataset. 
 
 from openprompt.data_utils import InputExample
 
@@ -90,7 +91,7 @@ from openprompt.prompts import ManualVerbalizer
 import torch
 
 # for example the verbalizer contains multiple label words in each class
-myverbalizer = ManualVerbalizer(tokenizer, num_classes=2, 
+myverbalizer = ManualVerbalizer(tokenizer, num_classes=3, 
                         label_words=[["yes"], ["no"], ["maybe"]])
 
 print(myverbalizer.label_words_ids)
