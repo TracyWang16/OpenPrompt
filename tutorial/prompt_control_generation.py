@@ -2,6 +2,7 @@ import argparse
 import torch
 import os
 import pandas as pd
+
 parser = argparse.ArgumentParser("")
 parser.add_argument("--lr", type=float, default=5e-5)
 parser.add_argument("--adam_epsilon", type=float, default=1e-8)
@@ -49,6 +50,7 @@ if not args.plm_eval_mode:
     dataset['train'] = ToxicityProcessor().get_examples(data_path=args.data_path, add_neg_example=args.add_neg_example, add_pos_example=args.add_pos_example, neg_example_filepath=args.neg_example_filepath,pos_example_filepath=args.pos_example_filepath)
 else:
     dataset['test'] = ToxicityProcessor().get_examples(data_path=args.data_path, add_neg_example=args.add_neg_example, add_pos_example=args.add_pos_example, neg_example_filepath=args.neg_example_filepath,pos_example_filepath=args.pos_example_filepath)
+
 # ## Construct Template
 # 
 # A template can be constructed from the yaml config, but it can also be constructed by directly passing arguments.
@@ -56,7 +58,6 @@ else:
 
 # %%
 from openprompt.plms import load_plm
-
 plm, tokenizer, model_config, WrapperClass = load_plm(args.model, args.model_name_or_path)
 #if args.plm_eval_mode:
 #    model_for_generate = torch.load(os.path.join(args.finetuned_model_path,'pytorch_model.bin'))
@@ -177,7 +178,6 @@ true_steps = 0
 if not os.path.exists(os.path.join(args.model_save_dir,'epoches')):
     os.makedirs(os.path.join(args.model_save_dir,'epoches'))
 '''
-
 if not args.plm_eval_mode:
     if not os.path.exists(os.path.join(args.model_save_dir,'epoches')):
         os.makedirs(os.path.join(args.model_save_dir,'epoches'))
@@ -244,34 +244,3 @@ if not args.plm_eval_mode:
     with open(os.path.join(args.model_save_dir,'log.txt'), 'a') as f_log:
         f_log.write("Best Epoch {} \n".format(best_epoch))
         f_log.close()
-
-else:
-    if use_cuda:
-        prompt_model=  prompt_model.cuda()  
-    assert not os.path.exists(args.generated_file_path)
-    generated_sentence = []
-    groundtruth_sentence = []
-
-    for step, inputs in enumerate(test_dataloader):
-        if use_cuda:
-            inputs = inputs.cuda()
-        _, output_sentence = prompt_model.generate(inputs, **generation_arguments)
-        generated_sentence.extend(output_sentence)
-        groundtruth_sentence.extend(inputs['tgt_text'])
-        print(len(generated_sentence))
-
-    dataframe = pd.DataFrame({'generated_sentence':generated_sentence,'groundtruth_sentence':groundtruth_sentence})
-    dataframe.to_csv(args.generated_file_path,index=False,sep=',')
-    
-
-    
-    #score = generation_metric(generated_sentence, groundtruth_sentence, "sentence_bleu")
-    #print("test_score", score, flush=True)
-#if use_cuda:
-#    prompt_model_new =  prompt_model_new.cuda()
-#prompt_model_new.eval()
-#evaluate(prompt_model_new, test_dataloader)
-
-
-#evaluate(prompt_model, test_dataloader)
-

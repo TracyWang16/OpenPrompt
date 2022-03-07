@@ -116,6 +116,7 @@ class ToxicityProcessor(DataProcessor):
                 text_a, tgt_text = self.text_split(text)
                 example = InputExample(guid=str(i), text_a=text_a, tgt_text=tgt_text)
                 #example = InputExample(guid=str(i), text_a=' '.join(text.split(' ')[:int(len(text.split(' '))/2)]), tgt_text=' '.join(text.split(' ')[int(len(text.split(' '))/2):]))
+                #example = InputExample(guid=str(i),text_a=text, tgt_text=text)
                 examples.append(example)
         
         return examples
