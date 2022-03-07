@@ -65,13 +65,9 @@ class MixedTemplate(Template):
                     raise ValueError(f'soft_id should be integer greater than zero, but get {d["soft_id"]}')
                 if d["soft_id"] in idx_mp:
                     id_list = idx_mp[d["soft_id"]]
-<<<<<<< HEAD
                     #text.extend([{"soft"} for _ in range(len(id_list))])
                     text.extend([{"soft":None} for _ in range(len(id_list))])
                     print('use {"soft":None} to prevent error at line 201')
-=======
-                    text.extend([{"soft":None} for _ in range(len(id_list))])
->>>>>>> c17d878297a497c0e156d44ceaf3fdcde912ed4d
                     soft_token_ids.extend(id_list)
                     continue
                 else:

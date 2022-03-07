@@ -51,6 +51,7 @@ class LMTokenizerWrapper(TokenizerWrapper):
         encoder_inputs = defaultdict(list)
 
         num_mask_token_used = 0
+        #input_text = []
         
         for piece_id, piece in enumerate(wrapped_example):
             if len(piece['text']) == 0:
@@ -78,6 +79,9 @@ class LMTokenizerWrapper(TokenizerWrapper):
                 encode_text =  [0] # can be replace by any token, since these token will use their own embeddings
             else: 
                 encode_text = self.tokenizer.encode(piece['text'], add_special_tokens=False)
+                #print(piece['text'])
+                #input_text.append({piece['text']:encode_text})
+                
             
             encoding_length = len(encode_text)
             
@@ -108,6 +112,7 @@ class LMTokenizerWrapper(TokenizerWrapper):
         if len(encoder_inputs['input_ids'])>self.max_seq_length:
             print('Ohhhh')
         encoder_inputs = {**encoder_inputs, "input_ids_len": input_ids_len}
+        #encoder_inputs = {**encoder_inputs, "input_text": input_text}
         return encoder_inputs
     
 

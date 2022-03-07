@@ -28,18 +28,18 @@ from openprompt.data_utils.data_processor import DataProcessor
 
 def select_examples(example_file, example_num):
     if example_file.endswith('.jsonl'):
-        fin_sele =  open (example_file,'r')
-        text_dict = json.loads(fin_sele.read())
+        fin_selected =  open (example_file,'r')
+        text_dict = json.loads(fin_selected.read())
         text_list = [text['comment_text'].replace('\\n','') for text in text_dict]
         text_list = [text.replace('\n','') for text in text_list]
     elif example_file.endswith('.txt'):
-        fin_sele =  open (example_file,'r')
-        text = fin_sele.readlines()
+        fin_selected =  open (example_file,'r')
+        text = fin_selected.readlines()
         text_list = [t[:-1] for t in text]
     while len(text_list)<example_num:
         text_list = text_list+text_list
     #return sample(text_list,example_num)
-    return text_list[0:example_num]
+    return text_list[:example_num]
     
 '''
 def add_examples(prompts, pos_file=None, neg_file=None):
@@ -62,6 +62,11 @@ class ToxicityProcessor(DataProcessor):
     def __init__(self):
         super().__init__()
         self.labels = None
+        
+    def text_split(self,text):
+        text_a=' '.join(text.split(' ')[:int(len(text.split(' '))/2)])
+        tgt_text=' '.join(text.split(' ')[int(len(text.split(' '))/2):])
+        return text_a, tgt_text
 
     def get_examples(self, data_path:str, line_by_line=False, add_neg_example=False, add_pos_example=False, pos_example_filepath=None, neg_example_filepath=None):
         examples = []
@@ -84,28 +89,32 @@ class ToxicityProcessor(DataProcessor):
             pos_examples = select_examples(example_file=pos_example_filepath, example_num=len(prompts))
         if add_neg_example:
             neg_examples = select_examples(example_file=neg_example_filepath, example_num=len(prompts))
-
+                
         if add_pos_example and add_neg_example:
             for i, (text, pos_example, neg_example) in enumerate(zip(prompts, pos_examples, neg_examples)):
+                text_a, tgt_text = self.text_split(text)
                 #example = InputExample(guid=str(i),text_a=text, tgt_text=text, meta={'pos':pos_example, 'neg':neg_example})
-                example = InputExample(guid=str(i), tgt_text=text, meta={'pos':pos_example, 'neg':neg_example})
+                example = InputExample(guid=str(i),text_a=text_a , tgt_text=tgt_text, meta={'pos':pos_example, 'neg':neg_example})
                 examples.append(example)
 
         elif add_pos_example:
             for i, (text, pos_example) in enumerate(zip(prompts,pos_examples)):
+                text_a, tgt_text = self.text_split(text)
                 #example = InputExample(guid=str(i),text_a=text, tgt_text=text, meta={'pos':pos_example})
-                example = InputExample(guid=str(i),text_a=' '.join(text.split(' ')[:int(len(text.split(' '))/2)]), tgt_text=' '.join(text.split(' ')[int(len(text.split(' '))/2):]), meta={'pos':pos_example})
+                example = InputExample(guid=str(i),text_a=text_a, tgt_text=tgt_text, meta={'pos':pos_example})
                 examples.append(example)
 
         elif add_neg_example:
             for i, (text,neg_example) in enumerate(zip(prompts,neg_examples)):
+                text_a, tgt_text = self.text_split(text)
                 #example = InputExample(guid=str(i),text_a=text, tgt_text=text, meta={'neg':neg_example})
-                example = InputExample(guid=str(i), tgt_text=text, meta={'neg':neg_example})
+                example = InputExample(guid=str(i), text_a=text_a, tgt_text=tgt_text, meta={'neg':neg_example})
                 examples.append(example)
 
         else:
             for i,text in enumerate(prompts):
-                example = InputExample(guid=str(i),tgt_text=text)
+                text_a, tgt_text = self.text_split(text)
+                example = InputExample(guid=str(i), text_a=text_a, tgt_text=tgt_text)
                 #example = InputExample(guid=str(i), text_a=' '.join(text.split(' ')[:int(len(text.split(' '))/2)]), tgt_text=' '.join(text.split(' ')[int(len(text.split(' '))/2):]))
                 examples.append(example)
         
